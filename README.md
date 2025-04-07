@@ -1,7 +1,7 @@
 libprocesshider
 ===============
 
-Hide a process under Linux using the ld preloader.
+Hide a list of processes under Linux using the ld preloader.
 
 Full tutorial available at https://sysdigcloud.com/hiding-linux-processes-for-fun-and-profit/
 
