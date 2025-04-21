@@ -1,7 +1,9 @@
-libprocesshider
+libprocesshider - This is forked version from "https://github.com/gianlucaborello/libprocesshider"
 ===============
 
-Hide a list of processes under Linux using the ld preloader.
+Instead the original version which hides only a single process. 
+
+This version hides a list of processes under Linux using the ld preloader.
 
 Full tutorial available at https://sysdigcloud.com/hiding-linux-processes-for-fun-and-profit/
 
